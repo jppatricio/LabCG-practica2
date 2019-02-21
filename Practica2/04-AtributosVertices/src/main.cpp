@@ -3,6 +3,7 @@
 
 //std includes
 #include <string>
+#include <vector>  //for std::vector
 #include <iostream>
 
 //glfw include
@@ -30,16 +31,26 @@ const GLchar* fragmentShaderSource = { "#version 400\n"
 
 "void main(void)\n"
 "{\n"
-"  out_Color = vec4(ourColor, 1.0);\n"
+"  out_Color = vec4(ourColor, 1.0);\n"//Color de entrada
 "}\n" };
 
+bool estrellaRender = true; // para solo renderear una de las figuras (TRUE -> Estrella, FALSE-> Casa)
+
 GLuint VBO, VAO;
+//Para la nueva figura en vertice:
+GLuint VBO2, VAO2;
 GLint vertexShader, fragmentShader, shaderProgram;
 
-typedef struct {
+typedef struct {// Éste representara cada verice con color
 	float XYZ[3];
 	float RGB[3];
 } Vertex;
+
+std::vector<Vertex> drawCircle(float cx, float cy, float r, int num_segments);
+
+typedef struct {// Para generar circulo
+	Vertex XYZ[100];
+} XYZArray;
 
 int screenWidth;
 int screenHeight;
@@ -64,7 +75,7 @@ bool processInput(bool continueApplication = true);
 
 // Implementacion de todas las funciones.
 void init(int width, int height, std::string strTitle, bool bFullScreen) {
-	
+
 	if (!glfwInit()) {
 		std::cerr << "Failed to initialize GLFW" << std::endl;
 		exit(-1);
@@ -150,32 +161,208 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 			<< std::endl;
 	}
 
-	Vertex vertices[] =
+	
+	Vertex verticesEstrella[] =
 	{
-		{ {-0.5f, -0.5f, 0.0f } ,{ 1.0f, 0.0f, 0.0f } },
-		{ { 0.5f, -0.5f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
-		{ { 0.0f,  0.5f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } }
+		//      POSICION                COLOR
+		{ { 0.0f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.0f } }, // >
+		{ { -0.5f, 0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.5f,  -0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.0f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.0f } }, // <
+		{ { 0.5f, 0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { 0.5f,  -0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.6f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.8f } },// <">"
+		{ { 0.5f, 0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { 0.5f,  -0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { -0.6f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.8f } },// "<">
+		{ { -0.5f, 0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.5f,  -0.1f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.0f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.0f } },// v
+		{ { 0.1f, 0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.1f,  0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.0f, 0.0f, 0.0f } ,{ 1.0f, 1.0f, 0.0f } },// ^
+		{ { 0.1f, -0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.1f,  -0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.0f, 0.6f, 0.0f } ,{ 1.0f, 1.0f, 0.8f } },
+		{ { 0.1f, 0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.1f,  0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+
+		{ { 0.0f, -0.6f, 0.0f } ,{ 1.0f, 1.0f, 0.8f } },
+		{ { 0.1f, -0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
+		{ { -0.1f,  -0.5f, 0.0f } ,{ 1.0f, 1.0f, 0.4f } },
 	};
 
-	const size_t bufferSize = sizeof(vertices);
-	const size_t vertexSize = sizeof(vertices[0]);
-	const size_t rgbOffset = sizeof(vertices[0].XYZ);
+	// se creeara nuevo arreglo---
+	Vertex verticesCasa[] =
+	{
+		//      POSICION                COLOR
+
+		//-------------- Chimenea
+
+		{ { 0.05f, 0.0f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.15f, 0.0f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.05f,  0.4f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+
+		{ { 0.05f, 0.4f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.15f, 0.4f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.15f,  0.0, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+
+		//----------------------------------------------||||
+		//-------------- Cuadrado
+		{ { 0.2f, 0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+		{ { 0.2f, -0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+		{ { -0.2f,  0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+
+		{ { -0.2f, -0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+		{ { -0.2f, 0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+		{ { 0.2f,  -0.2f, 0.0f } ,{ 0.9f, 1.0f, 1.0f } },
+		//----------------------------------------------||||
+		//-------------- Rectangulotecho
+		{ { 0.2f, 0.15f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.2f, 0.2f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.2f,  0.2f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+
+		{ { -0.2f, 0.15f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.2f, 0.2f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { 0.2f,  0.15f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		//----------------------------------------------||||
+
+		//-------------- Techo
+		{ { 0.2f, 0.2f, 0.0f } ,{ 0.8f, 0.56f, 0.2f } },
+		{ { -0.2f, 0.2f, 0.0f } ,{ 0.8f, 0.56f, 0.2f } },
+		{ { 0.0f,  0.4f, 0.0f } ,{ 0.8f, 0.56f, 0.2f } },
+		//----------------------------------------------||||
+		//-------------- Techo (Tejas)
+		{ { 0.22f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.24f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.0f,  0.42f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+
+		{ { 0.22f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.0f, 0.4f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.0f,  0.42f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+
+		{ { -0.22f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { -0.24f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.0f,  0.42f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+
+		{ { -0.22f, 0.18f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { -0.0f, 0.4f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		{ { 0.0f,  0.42f, 0.0f } ,{ 1.0f, 0.0f, 0.2f } },
+		//----------------------------------------------||||
+		//-------------- VentanaTecho
+		{ { 0.03f, 0.25f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { -0.03f, 0.25f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { -0.03f,  0.30f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+
+		{ { 0.03f, 0.30f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { -0.03f, 0.30f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.03f,  0.25f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		//----------------------------------------------||||
+		//-------------- Marco Puerta
+		{ { -0.18f, -0.2f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { -0.18f, 0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { -0.02f,  0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+
+		{ { -0.18f, -0.2f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { -0.02f, 0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { -0.02f,  -0.2f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		//----------------------------------------------||||
+		//-------------- Puerta
+		{ { -0.16f, -0.18f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.16f, 0.08f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.04f,  0.08f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+
+		{ { -0.16f, -0.18f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.04f, 0.08f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		{ { -0.04f,  -0.18f, 0.0f } ,{ 0.8f, 0.61f, 0.61f } },
+		//----------------------------------------------||||
+		//-------------- Marco Ventana2
+		{ { 0.18f, -0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { 0.18f, 0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { 0.02f,  0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+
+		{ { 0.18f, -0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { 0.02f, 0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		{ { 0.02f,  -0.1f, 0.0f } ,{ 0.61f, 0.4f, 0.12f } },
+		//----------------------------------------------||||
+		//-------------- Ventana 2
+		{ { 0.16f, -0.0f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.16f, 0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f,  0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+
+		{ { 0.16f, -0.0f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f, 0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f,  -0.0f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		//-------------- Ventana 3
+		{ { 0.16f, -0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.16f, -0.02f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f,  -0.02f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+
+		{ { 0.16f, -0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f, -0.02f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		{ { 0.04f,  -0.08f, 0.0f } ,{ 0.0f, 0.0f, 1.0f } },
+		//-------------- Pasto
+		{ { 1.0f, -1.0f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+		{ { -1.0f, -1.0f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+		{ { -1.0f,  -0.2f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+
+		{ { 1.0f, -0.2, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+		{ { -1.0f, -0.2f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+		{ { 1.0f,  -1.0f, 0.0f } ,{ 0.0f, 1.0f, 0.0f } },
+		//----------------------------------------------||||
+	};
+	//----------------------------
+
+	//Esto es para ESTRELLA
+
+	const size_t bufferSize = sizeof(verticesEstrella);// tamaño del arreglo 6x4x3 = 18x4 bytes
+	const size_t vertexSize = sizeof(verticesEstrella[0]);// tamaño de los vertices 6x4 bytes
+	const size_t rgbOffset = sizeof(verticesEstrella[0].XYZ);// offset para lo colores 3x4 bytes (Para ignorar los de posicion en vertices)
 
 	std::cout << "Buffer Size:" << bufferSize << std::endl;
 	std::cout << "Vertex Size:" << vertexSize << std::endl;
 	std::cout << "Buffer size:" << rgbOffset << std::endl;
-
 	glGenBuffers(1, &VBO);
 
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, bufferSize, vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, bufferSize, verticesEstrella, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertexSize, 0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertexSize,
-		(GLvoid*)rgbOffset);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, vertexSize, 0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertexSize, (GLvoid*)rgbOffset);
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	//Este es para CASA
+	const size_t bufferSize2 = sizeof(verticesCasa);// tamaño del arreglo
+	const size_t vertexSize2 = sizeof(verticesCasa[0]);// tamaño de los vertices
+	const size_t rgbOffset2 = sizeof(verticesCasa[0].XYZ);// offset para lo colores (Para ignorar los de posicion en vertices)
+
+	std::cout << "Buffer2 Size:" << bufferSize2 << std::endl;
+	std::cout << "Vertex2 Size:" << vertexSize2 << std::endl;
+	std::cout << "Buffer2 size:" << rgbOffset2 << std::endl;
+	glGenBuffers(1, &VBO2);
+
+	glGenVertexArrays(1, &VAO2);
+	glBindVertexArray(VAO2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+	glBufferData(GL_ARRAY_BUFFER, bufferSize2, verticesCasa, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertexSize2, 0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertexSize2, (GLvoid*)rgbOffset2);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
@@ -223,6 +410,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		case GLFW_KEY_ESCAPE:
 			exitApp = true;
 			break;
+		case GLFW_KEY_E:
+			estrellaRender = true;
+			break;
+		case GLFW_KEY_C:
+			estrellaRender = false;
+			break;
 		}
 	}
 }
@@ -249,7 +442,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int state, int mod) {
 	}
 }
 
-bool processInput(bool continueApplication){
+bool processInput(bool continueApplication) {
 	if (exitApp || glfwWindowShouldClose(window) != 0) {
 		return false;
 	}
@@ -264,11 +457,21 @@ void applicationLoop() {
 		psi = processInput(true);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		
+
 		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		if (estrellaRender) { // para elegir cual renderizar
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glBindVertexArray(VAO);
+			glDrawArrays(GL_TRIANGLES, 0, 24);
+		}
+		else {
+			glClearColor(0.82f, 0.93f, 0.93f, 1.0f);
+			glBindVertexArray(VAO2);
+			glDrawArrays(GL_TRIANGLES, 0, 160);
+		}
+
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
